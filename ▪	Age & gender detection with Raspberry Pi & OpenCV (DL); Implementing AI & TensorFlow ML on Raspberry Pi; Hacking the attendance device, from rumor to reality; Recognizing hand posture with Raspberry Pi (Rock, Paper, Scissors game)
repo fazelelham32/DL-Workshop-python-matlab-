@@ -1,0 +1,1109 @@
+# Age and gender detection with Raspberry Pi and OpenCV (deep learning)
+04/05/1400
+Approximate reading time is 3 minutes
+
+Contents [show]
+In this tutorial, I want to use OpenCV and Deep Learning models to identify the gender and age of the person in front of the camera. The deep learning age model and gender detector that we are going to use today was implemented and trained by Levi and Hassner in 2015. Age and gender detection is a two-step process:
+• Step 1: Identify faces in the input video stream
+• Step 2: Extract the face region of interest (ROI) and apply the age and gender algorithm to guess the person's age and gender.
+The predicted gender will be "Male" or "Female" and the predicted age can be one of the following ranges: (0 - 2), (4 - 6), (8 - 12), (15 - 20) , (25-32), (38-43), (48-53), (60-100). We have already used Raspberry Pi for some complex image processing projects such as face recognition with Raspberry Pi and people recognition with Raspberry Pi.
+Video display
+00:00
+00:35
+Here, we only need the camera module and the Raspberry Pi board with OpenCV installed. OpenCV is used here for digital image processing. The most common applications of digital image processing are object recognition, face recognition and people counting.
+Install OpenCV
+Raspberry Pi must be fully updated before installing OpenCV and other dependencies. Use the following commands to update your Raspberry Pi to the latest version:
+Arduino training course, ESP32 training course, STM32 training course, Electronics training course
+Pico board training course, Raspberry Pi training course, Altium Designer training course, do you want a course discount?
+AVR training course, Proteus training course, Internet of Things training course, board and electronic parts store
+sudo apt-get update
+Then use the following commands to install the dependencies required to install OpenCV on your Raspberry Pi.
+sudo apt-get install libhdf5-dev -y
+sudo apt-get install libhdf5-serial-dev –y
+sudo apt-get install libatlas-base-dev –y
+sudo apt-get install libjasper-dev -y
+sudo apt-get install libqtgui4 –y
+sudo apt-get install libqt4-test –y
+After that, use the following command to install OpenCV on your Raspberry Pi.
+pip3 install opencv-contrib-python==4.1.0.25
+Required parts
+• Raspberry Pie
+• Pi camera module
+Get the required parts from the Ironex parts store.
+Raspberry Pi programming to detect age and gender
+You can download the age and gender detection project code with Raspberry Pi from the bottom of the page. Here we explain the important parts of the code.
+Start the code by calling the OpenCV and math packages.
+import cv2
+import math
+The highlightFace() function is used to get the coordinates of the face. In the first three lines, we determine the height and width of the frame. In the next lines, we extract the coordinates of the face. Then use these coordinates to create a rectangle around the face.
+def highlightFace(net, frame, conf_threshold=0.7):
+ frameOpencvDnn=frame.copy()
+ frameHeight=frameOpencvDnn.shape[0]
+ frameWidth=frameOpencvDnn.shape[1]
+ blob=cv2.dnn.blobFromImage(frameOpencvDnn, 1.0, (300, 300), [104, 117, 123], True, False)
+ net.setInput(blob)
+ detections=net.forward()
+ faceBoxes=[]
+ for i in range(detections.shape[2]):
+ confidence=detections[0,0,i,2]
+ if confidence>conf_threshold:
+ x1=int(detections[0,0,i,3]*frameWidth)
+ y1=int(detections[0,0,i,4]*frameHeight)
+ x2=int(detections[0,0,i,5]*frameWidth)
+ y2=int(detections[0,0,i,6]*frameHeight)
+ faceBoxes.append([x1,y1,x2,y2])
+ cv2.rectangle(frameOpencvDnn, (x1,y1), (x2,y2), (0,255,0), int(round(frameHeight/150)), 8)
+ return frameOpencvDnn,faceBoxes
+In the next lines, we will go to the diagnosis of gender and age.
+faceProto="face_detector/opencv_face_detector.pbtxt"
+faceModel="face_detector/opencv_face_detector_uint8.pb"
+ageProto="age_detector/age_deploy.prototxt"
+ageModel="age_detector/age_net.caffemodel"
+genderProto="gender_detector/gender_deploy.prototxt"
+genderModel="gender_detector/gender_net.caffemodel"
+We enter a list of images related to men and women and age.
+MODEL_MEAN_VALUES=(78.4263377603, 87.7689143744, 114.895847746)
+ageList=['(0-2)', '(4-6)', '(8-12)', '(15-20)', '(25-32)', '(38-43)' , '(48-53)', '(60-100)']
+genderList=['Male','Female']
+Using the previously defined path, we load face detection, age detection and gender detection models from disk.
+faceNet=cv2.dnn.readNet(faceModel,faceProto)
+ageNet=cv2.dnn.readNet(ageModel,ageProto)
+genderNet=cv2.dnn.readNet(genderModel,genderProto)
+Then we receive the incoming video stream.
+video=cv2.VideoCapture(0)
+Inside the loop, we receive the frames from the video stream and then call the highlightFace() function with the faceNet and frame parameters.
+hasFrame,frame=video.read()
+resultImg,faceBoxes=highlightFace(faceNet,frame)
+After getting the face box, we create a 4D slice of the image. By doing this, we scale it, resize it.
+If you have any questions about this article, ask in the comments section
+Suggested article: Android and Raspberry Pi communication project with Bluetooth and pin control
+blob=cv2.dnn.blobFromImage(face, 1.0, (227,227), MODEL_MEAN_VALUES, swapRB=False)
+Now, we pass the data through the gender detection model and determine the gender.
+genderNet.setInput(blob)
+genderPreds=genderNet.forward()
+gender=genderList[genderPreds[0].argmax()]
+Then we follow the same method for age detection.
+ageNet.setInput(blob)
+agePreds=ageNet.forward()
+age=ageList[agePreds[0].argmax()]
+Now, after receiving the results of age and gender, we add the gender and age to the resulting image using the cv2.putText() function and display it with imshow().
+text = "{}:{}".format(gender, age)
+cv2.putText(resultImg, text,(faceBox[0], faceBox[1]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,255,255), 2, cv2.LINE_AA)
+cv2.imshow("Detecting age and gender", resultImg)
+Testing the age and gender classification project with Raspberry Pi
+Before running the Python script, connect the Raspberry Pi Camera module to the Raspberry Pi as shown below.
+
+Now, check if the Pi camera is working or not. After checking the camera, run the python script, you will find a window where your video will appear. Once the Raspberry Pi detects the age and gender, it prints it on the screen.
+
+This way you can detect age and gender using OpenCV and Python.
+Items in the file: complete source
+# Implementing artificial intelligence and TensorFlow machine learning on Raspberry Pi
+05/13/2019
+Approximate reading time is 4 minutes
+
+hello We have prepared a tutorial on installing artificial intelligence and TensorFlow machine learning in Raspberry Pi.
+Machine learning and artificial intelligence are important topics in industries, and today we are witnessing an increase in their involvement with the launch of new electronic devices. Currently, many devices on the market use the power of machine learning and artificial intelligence, such as the smartphone camera uses AI features for face recognition and apparent age expression for face recognition.
+It is not surprising that Google is one of the pioneers of this technology. Google has already built ML and AI frameworks that we can easily implement in our applications. TensorFlow is one of the most famous open source neural network libraries from Google, which is used in machine learning programs such as image classification, object recognition, etc.
+In the coming years, we will see more use of artificial intelligence in our daily lives, and artificial intelligence will be able to do your daily tasks, such as shop orders, starting the car, controlling your home appliances, etc.
+Arduino training course, ESP32 training course, STM32 training course, Electronics training course
+Pico board training course, Raspberry Pi training course, Altium Designer training course, do you want a course discount?
+AVR training course, Proteus training course, Internet of Things training course, board and electronic parts store
+In this tutorial, we'll learn how to install TensorFlow on a Raspberry Pi and show some simple image classification examples on a pre-trained neural network. We've already used the Raspberry Pi for other image processing tasks:
+• License plate recognition with Raspberry Pi and OpenCV image processing
+• Face recognition project with OpenCV and Raspberry Pi + performance video
+Requirements for installing artificial intelligence on Raspberry pi
+1. Raspberry Pi with Raspbian OS installed (SD card at least 16GB)
+2. Internet connection
+Raspberry pi, as a portable and low-power device, is used in many image processing applications such as face recognition, object tracking, home security system, CCTV, etc. A large number of powerful image processing applications can be built with the Raspberry Pi.
+In the past, installing TensorFlow was a very difficult task, but recently ML and AI developers have made it very simple and now it can be installed with just a few commands. Even if you are new to machine learning, there is no problem and you can still continue with the tutorial and use some example programs to learn it.
+Step-by-step tutorial on installing TensorFlow on Raspberry Pi
+Below are the steps to install TensorFlow on Raspberry Pi:
+Step 1: Before installing TensorFlow on Raspberry Pi, first update the Raspbian operating system using the commands below.
+sudo apt-get update
+sudo apt-get upgrade
+Step 2: Then install the Atlas library to support Numpy and other dependencies.
+sudo apt install libatlas-base-dev
+Step 3: Once done, install TensorFlow via pip3 using the following command.
+pip3 install tensorflow
+TensorFlow will take some time to install, if you encounter an error during installation, just try again using the command above.
+Suggested article: Building a ball tracking robot with Raspberry Pi and Processing
+
+Step 4: After successfully installing TensorFlow, we will check if it is installed correctly using the Hello World app. To do that, open the nano text editor using the following command.
+sudo nano tfcheck.py
+And copy the following lines in nano terminal and save it using ctrl + x and hit enter.
+If you have any questions about this article, ask in the comments section
+import tensorflow as tf
+hello = tf.constant('Hello, TensorFlow!')
+sess = tf.Session()
+print(sess.run(hello))
+Step 5: Now, run the script in the terminal using the following command.
+python3 tfcheck.py
+If all packages are installed correctly, you will see Hello Tensorflow. Ignore all warnings.
+
+
+In this case Tensorflow works well and now we will do some interesting things using TensorFlow and you don't need to have any knowledge about machine learning and deep learning to do this project.
+Installing image classifier on Raspberry Pi for image recognition
+Here we run the image classification program on the Raspberry Pi so that the Raspberry Pi recognizes that the given image is similar to something.
+Step 1: Create and navigate to the directory using the following commands.
+mkdir tf
+cd tf
+Step 2: Now load the models in the TensorFlow GIT repository. Import the repository into the tf folder using the following command.
+git clone https://github.com/tensorflow/models.git
+Installation takes time and is quite large in size so make sure you have enough space.
+Step 3: We use the image classification examples that you can find in models/tutorials/image/imagenet. Navigate to this folder using the following command.
+cd models/tutorials/image/imagenet
+Step 4: Now we give an image to the program to recognize it.
+python3 classify_image.py --image_file=/home/pi/image_file_name
+Replace image_file_name with the image you want and then hit enter.
+Below are some examples of image recognition using TensorFlow.
+
+As you can see, Tenserflow recognized the mobile image with 99% accuracy.
+ Tenserflow recognized the image of a cat with a high difference compared to other options.
+
+As can be seen, Tenserflow has recognized the image of the mountain with an accuracy of approximately 65%.
+In all the above examples the results are very good and TensorFlow can easily classify the images with good confidence.
+Hacking the attendance device, from rumor to reality
+12/08/1400
+Approximate reading time is 6 minutes
+
+Contents [show]
+One of the most important concerns when buying a traffic control and access control device is many doubts regarding the possibility of bypassing and hacking the device. But is the case of hacking the attendance device real or just a rumor? In the following, we are going to examine the issue and resolve the doubts in this field. With the progress made and the use of the latest technologies in the world, the possibility of infiltrating information systems has definitely been reduced to a great extent, but hacking and infiltrating information systems is still possible and intruders are looking for a way to infiltrate and steal information every day. This issue is also true in relation to attendance devices, although the use of biometric technology in traffic control and access control devices has greatly increased the level of device security.
+
+Is it possible to circumvent and cheat the attendance machine?
+Although the advancement of technology has led to an increase in the level of security, hackers are not idle and they are still a way to infiltrate information systems. It is very clear that it is very easy to cheat in the absence card attendance device and a person can easily register the traffic by having the traffic card of other personnel. In general, bypassing the old timekeeping devices (punch attendance and absence devices, card and password) is less difficult and you can easily fool the device by only accessing the other party's card or password. But this is more complicated in the biometric watchmaking device and requires its own special tools and expertise. One of the most common methods of hacking biometric traffic control devices is hacking biometric patterns and forging biometric features (forging fingerprints, faces, etc.).
+The more complex the authentication technology used is, the more difficult the ways to hack the device are, and in many cases close to zero. For example, the XF100fh nanotime face recognition presence/absence device, due to the Anti-spoofing algorithm, the possibility of any sabotage and forgery in this device is very low and impossible. In addition to facial recognition and fingerprint scanning, this device has the ability to authenticate with the help of an ID card, which is one of its advantages. Nanotime model XF100 presence and absence device can also be used as access control (third-party electric lock, door sensor, exit button) which can complement this product as an all-in-one product in addition to Wi-Fi connectivity.
+Arduino training course, ESP32 training course, STM32 training course, Electronics training course
+Pico board training course, Raspberry Pi training course, Altium Designer training course, do you want a course discount?
+AVR training course, Proteus training course, Internet of Things training course, board and electronic parts store
+Methods of hacking the fingerprint attendance device:
+1. Making a fake fingerprint:
+Obtaining the desired person's fingerprint and creating a sample of it using glue, gelatin, silicone, a quality image of the fingerprint, etc. to place on the device's sensor is one of the first methods of hacking the device. Although this method is possible in devices that have old fingerprint sensors, and most of the smart sensors are equipped with live tissue detection algorithm (LFD technology or (Live Fingerprint Detection) or thermal sensors, the possibility of cheating them is very low.
+
+To hack the fingerprint attendance device, a person only needs the fingerprint of one of the administrators of the device. It may seem that it is difficult to obtain the administrator's fingerprints, but if you have a silicone cup with a person's fingerprints on it, you can easily make a copy of the administrator's fingerprints using a 3D printer, or if you do not have access to The 3D printer should use latex gloves. Indeed, if it is so easy to hack information and bypass the fingerprint watch device, what is the need to use it?
+2. Registering fingerprints of more than one person at the same time:
+In devices with the possibility of registering more than one fingerprint for each person, if another person's fingerprint is registered, they can easily access the data of the device. But this method can be easily controlled and by defining an administrator for the device, fingerprints will be registered by only one person. This method can be easily avoided, for this purpose an administrator has been defined for the device and only the administrator has the permission to record personnel fingerprint operations.
+3. Hacking biometric templates (Biometric Template):
+By placing a person's finger on the device's sensor, its important points are selected for identification and an image is produced, which after analysis is converted into a binary code and stored in the database, and if the person's fingerprint is matched with authentication, it will happen. In biometric hacking, the stolen binary data will be transferred to another device for introduction and application. In many cases, the theft of binary codes is not a concern because the patterns of introduction and matching are different in different devices. The theft of biometric patterns is a concern only when it is used for financial transactions and money transfers. Today, by encrypting people's biometric data immediately after registration and storage in the database, the risk of data theft can be greatly reduced. This hacking method is common in all attendance devices based on biometric features.
+Fake fingerprint detection methods in fingerprint-based traffic control systems:
+Measuring the amount of static electricity of the finger placed on the sensor
+Analysis of image distortion and fingerprint details by advanced algorithm
+Analysis of image distortion and fingerprint details by advanced algorithm
+Irradiating infrared light to the surface of the sensor and measuring the frequency returned from the finger
+Methods of hacking the facial recognition device:
+Facial recognition devices are more popular than fingerprint and card samples due to the use of stronger identification algorithms. This style of traffic control devices is the best option for environments with a high risk of disease transmission, including hospitals, medical diagnosis laboratories, etc., due to the lack of contact with the surface.
+Although the development of face-based identification algorithms has led to an increase in the level of security in these devices, hackers have also been looking for ways to bypass the above algorithms. At the beginning of the emergence of face recognition systems, due to the weaknesses in the implementation of algorithms, the device was not able to recognize a high-quality image from a real face, and by placing a 3D mask of a person's face or a high-quality image in front of the device's camera, It was possible to cheat the device.
+
+If you have any questions about this article, ask in the comments section
+Using the concepts of machine learning and deep learning has led to an increase in the level of security in facial recognition devices. The newest and most advanced face recognition methods with masks are designed using deep learning. So that the new devices are not only not hackable, but also have the ability to recognize the face with a mask or even while moving. On Nanotime's website at www.nanotime.ir, a comprehensive article has been presented regarding "how the facial recognition device with a mask works".
+Methods of hacking the iris recognition device:
+Iris detection is one of the most secure authentication algorithms used in traffic control devices. The iris scanners installed in the traffic control device by shining infrared light on the eye surface of the person and by measuring the colored rings of the eye, prepare a unique pattern of the iris of the person's eye, which cannot be recognized by using the untrained eye. Iris scanners are designed in such a way that they identify and remove all disturbing factors, including eyelashes, eyelids and light reflections that normally block parts of the iris, and finally a set of pixels It includes the iris. In the next step, it analyzes the pattern of lines and eye color and encodes the information in the iris. This pattern is converted to digitized bits and compared to patterns stored in a database for verification (one-to-one pattern matching) or identification (one-to-many pattern matching).
+What cases increase the risk of hacking in attendance devices?
+• Not using attendance devices equipped with the latest security technologies
+• Immediately after creating a biometric template, the time to define a new fingerprint and confirm the fingerprint
+• Not using data encryption methods recorded in the database
+• The transmission network is not secure in order to transfer biometric patterns between the device and the server
+• Unsafe server data or cloud space containing biometric data
+• Failure to install safe attendance software on the device
+• Installing the device in a remote location that increases the possibility of any hacking
+Recognizing hand posture with Raspberry Pi (Rock, Paper, Scissors game)
+We have all played rock, paper and scissors at least once. This is a very simple game where each player chooses one of three items (rock, paper and scissors). There are the following rules in this game:
+• Paper beats rock
+• Scissors cut the paper
+• The rock beats the scissors
+So in today's tutorial, we will learn how to run Rock, Paper and Scissors with Raspberry Pi using OpenCV and Tensorflow. This project consists of three stages:
+• Data collection
+• Model training
+• Motion detection
+At the first stage, we collect images of rock, paper, scissors and blanks. This dataset contains 800 images belonging to four classes. In the second step, we will train the recognizer to recognize the gestures made by the user, and in the last step, we will use the trainer data to recognize the user's hand gesture. By detecting the user's movement, Raspberry Pi performs a random movement and after comparing both hand positions, the winner is announced.
+Video display
+00:00
+00:43
+Required parts
+• Raspberry Pie
+• Pi camera module
+Here, we only need the RPi 4 camera module and a Pi board with OpenCV and Tensorflow installed. OpenCV is used here for digital image processing. The most common applications of digital image processing are object recognition, face recognition, and people counting.
+Arduino training course, ESP32 training course, STM32 training course, Electronics training course
+Pico board training course, Raspberry Pi training course, Altium Designer training course, do you want a course discount?
+AVR training course, Proteus training course, Internet of Things training course, board and electronic parts store
+Install OpenCV
+Raspberry Pi must be fully up-to-date before installing OpenCV and other dependencies. To update Raspberry Pi to the latest version, use the following commands:
+sudo apt-get update
+Then use the following commands to install the dependencies required to install OpenCV on your Raspberry Pi.
+sudo apt-get install libhdf5-dev -y
+sudo apt-get install libhdf5-serial-dev –y
+sudo apt-get install libatlas-base-dev –y
+sudo apt-get install libjasper-dev -y
+sudo apt-get install libqtgui4 –y
+sudo apt-get install libqt4-test –y
+After that, use the following command to install OpenCV on your Raspberry Pi.
+pip3 install opencv-contrib-python==4.1.0.25
+Installing imutils: The imutils package is used to facilitate image processing functions such as translating, rotating, resizing, skeletonizing, and displaying Matplotlib images with OpenCV. To install imutils, use the following command:
+pip3 install imutils
+Install Tensorflow: Use the following command to install Tensorflow:
+sudo pip3 install https://github.com/lhelontra/tensorflow-on-arm/releases/download/v2.2.0/tensorflow-2.2.0-cp37-none-linux_armv7l.whl
+sklearn (Scikit-learn): This is a Python library that provides a wide range of supervised and unsupervised learning algorithms through a static interface in Python. Here we are going to use it to build a machine learning model that can recognize hand gestures. Use the following command to install sklearn on Raspberry Pi.
+pip3 install sklearn
+SqueezeNet: This is a neural network model for computer vision. SqueezeNet is a small neural network model that runs on top of the Caffe deep learning framework. Here, we used SqueezeNet because of its small size and accuracy. It is more possible to deploy this model in hardware with limited memory. Install keras_squeezenet using the following command:
+pip3 install keras_squeezenet
+Programming Raspberry Pi for hand motion detection
+As mentioned earlier, we plan to complete this project in three phases. The first step is to collect information. The second case is recognition training and the third recognition of the movement performed by the user. The project folder contains the following:
+• Dataset: This folder contains images related to paper, scissors, rock and blank images.
+• image.py: A simple Python script to collect images to build a dataset.
+• training.py: This accepts the input dataset and sets Squeezenet on it to build our motion detection model (game-model.h5).
+• game.py: This script detects rock, paper and scissors using trainer data and also randomizes a move for Raspberry Pi.
+Suggested article: Teaching serial communication between Arduino and Raspberry Pi
+You can download the complete project folder and source codes from the bottom of the page.
+1. Data collection
+In the first phase of the project, we want to create a dataset that contains 200 images for each class (rock, paper, scissors, and nothing). Image.py is a simple Python script that uses OpenCV to collect motion images. Open the image.py file in the folder and paste the given code. Then we start collecting images using the following command:
+python3 image.py 200
+Once you've started the script, press the "r" key to take screenshots of Rock's movement, and then press "a" to start the process. You have to press "p" for paper, "s" for scissors and "n" for nothing.
+If you have any questions about this article, ask in the comments section
+The image collection program is described below:
+The script starts by calling the required packages.
+import cv2
+import os
+import sys
+
+The next line of code accepts the system argument and is used to enter the number of samples we want to collect.
+num_samples = int(sys.argv[1])
+Then enter the data path where all these images are stored.
+IMG_SAVE_PATH = 'images'
+The following lines create the image directory folder.
+try:
+ os.mkdir(IMG_SAVE_PATH)
+except FileExistsError:
+ pass
+Then create a rectangle using cv2.rectangle function. When running the script, you must put your hands inside this rectangular box.
+cv2.rectangle(frame, (10, 30), (310, 330), (0, 255, 0), 2)
+Then recognize the keystrokes in the next lines. If the pressed key is “r”, set the label name to “rock” and create a folder called rock inside the image directory. If the pressed key is "p", set the label name to paper and so on.
+k = cv2.waitKey(1)
+ if k == ord('r'):
+ name = 'rock'
+ IMG_CLASS_PATH = os.path.join(IMG_SAVE_PATH, name)
+ os.mkdir(IMG_CLASS_PATH)
+ if k == ord('p'):
+ name = 'paper'
+ IMG_CLASS_PATH = os.path.join(IMG_SAVE_PATH, name)
+ os.mkdir(IMG_CLASS_PATH)
+ if k == ord('s'):
+ name = 'scissors'
+ IMG_CLASS_PATH = os.path.join(IMG_SAVE_PATH, name)
+ os.mkdir(IMG_CLASS_PATH)
+ if k == ord('n'):
+ name = 'nothing'
+ IMG_CLASS_PATH = os.path.join(IMG_SAVE_PATH, name)
+ os.mkdir(IMG_CLASS_PATH)
+If the start button is pressed, create a Region of Interest (ROI) around the rectangle we created earlier and save all the images inside the directory using the path entered earlier.
+roi = frame[25:335, 8:315]
+ save_path = os.path.join(IMG_CLASS_PATH, '{}.jpg'.format(counter + 1))
+ print(save_path)
+ cv2.imwrite(save_path, roi)
+ counter += 1
+ font = cv2.FONT_HERSHEY_SIMPLEX
+ cv2.putText(frame,"Collecting {}".format(counter),
+ (10, 20), font, 0.7, (0, 255, 255), 2, cv2.LINE_AA)
+ cv2.imshow("Collecting images", frame)
+2. Model training
+Now that we have collected the images, we can pass them to the neural network and start the training process to automatically recognize the movement made by the user. So, open the train.py file in the game folder and paste the given code. Then start the training process using the following command:
+python3 training.py
+The Python script for the Recognizer tutorial is described below:
+Suggested article: Training to build a NAS server with Raspberry Pi and Samba
+The Training.py script starts by importing the required packages. The following lines after importing the packages are used to specify the path to the image directory and class map.
+IMG_SAVE_PATH = 'images'
+CLASS_MAP = {
+ "rock": 0,
+ "paper": 1,
+ "scissors": 2,
+ "nothing": 3
+}
+Now load all the images into the python script so we can start the tutorial. The pre-processing steps include converting the images to RGB from BGR, resizing the images to 227 x 227 pixels and converting them to array format.
+for directory in os.listdir(IMG_SAVE_PATH):
+ path = os.path.join(IMG_SAVE_PATH, directory)
+ if not os.path.isdir(path):
+ continue
+ for item in os.listdir(path):
+ if item.startswith("."):
+ continue
+ img = cv2.imread(os.path.join(path, item))
+ img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+ img = cv2.resize(img, (227, 227))
+ dataset.append([img, directory])
+Now, we call the get model function and compile the model with the Adam optimizer.
+model = get_model()
+model.compile(
+ optimizer=Adam(lr=0.0001),
+ loss='categorical_crossentropy',
+ metrics=['accuracy']
+)
+After this, start training the model and save the model as “game-model.h5” after the training is finished.
+model.fit(np.array(data), np.array(labels), epochs=15)
+model.save("game-model.h5")
+3. Hand movement detection
+Now, in the last step of our project, we will use the trainer data to classify each hand gesture from the live video. So open the game.py file and paste the given code. The Python code is explained below:
+Like the training.py script, this script starts by importing the required packages. The following lines after importing the packages are used to create the reverse class-map function.
+REV_CLASS_MAP = {
+ 0: "rock",
+ 1: "paper",
+ 2: "scissors",
+ 3: "nothing"
+}
+The calculate_winner function checks and compares the movement of the user's hand and the movement of the Raspberry Pi, and finally the winner is announced. The rules of the rock, paper, scissors game are used to determine the winner.
+def calculate_winner(user_move, Pi_move):
+ if user_move == Pi_move:
+ return "Tie"
+ elif user_move == "rock" and Pi_move == "scissors":
+ return "You"
+ elif user_move == "rock" and Pi_move == "paper":
+ return "Pi"
+ elif user_move == "scissors" and Pi_move == "rock":
+ return "Pi"
+ elif user_move == "scissors" and Pi_move == "paper":
+ return "You"
+ elif user_move == "paper" and Pi_move == "rock":
+ return "You"
+ elif user_move == "paper" and Pi_move == "scissors":
+ return "Pi"
+Then, in the next line, load the trained model and start streaming the video
+model = load_model("game-model.h5")
+cap = cv2.VideoCapture(0)
+Inside the loop, create two rectangles on the left and right sides of the frame. The left rectangle is for user movement and the right rectangle is for Raspberry Pi movement. Then it converts the image area inside the user's rectangle to RGB format and changes its size to 227 x 227.
+ cv2.rectangle(frame, (10, 70), (300, 340), (0, 255, 0), 2)
+ cv2.rectangle(frame, (330, 70), (630, 370), (255, 0, 0), 2)
+ roi = frame[70:300, 10:340]
+ img = cv2.cvtColor(roi, cv2.COLOR_BGR2RGB)
+ img = cv2.resize(img, (227, 227))
+Now, use the pattern we taught earlier and detect motion. We compare the detected motion with the images and print the name of the motion.
+pred = model.predict(np.array([img]))
+move_code = np.argmax(pred[0])
+user_move_name = mapper(move_code)
+On the next line, check if the user moves. Otherwise, let the Raspberry Pi make its random move and then use the calculate_winner function to decide the winner. If the user's move is "nothing", wait for the user to make a move.
+if prev_move != user_move_name:
+ if user_move_name != "nothing":
+ computer_move_name = choice(['rock', 'paper', 'scissors'])
+ winner = calculate_winner(user_move_name, computer_move_name)
+ otherwise:
+ computer_move_name = "nothing"
+ winner = "Waiting..."
+ prev_move = user_move_name
+In these lines, we have used the cv2.putText function to display the user's movement, the movement of the Raspberry Pi and display the winner's name in the frame.
+font = cv2.FONT_HERSHEY_SIMPLEX
+ cv2.putText(frame, "Your Move: " + user_move_name,
+ (10, 50), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
+ cv2.putText(frame, "Pi's Move: " + computer_move_name,
+ (330, 50), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
+ cv2.putText(frame, "Winner: " + winner,
+ (100, 450), font, 2, (0, 255, 0), 4, cv2.LINE_AA)
+Now, we will display the motion of the Raspberry Pi inside the rectangle we created earlier. The Raspberry Pi board randomly selects one of the images stored in the "test_img" folder.
+if computer_move_name != "nothing":
+ icon = cv2.imread(
+ "test_img/{}.png".format(computer_move_name))
+ icon = cv2.resize(icon, (300, 300))
+ frame[70:370, 330:630] = icon
+Now that everything is ready, connect the Raspberry Pi Camera module to the Raspberry Pi as shown below:
+Suggested article: Training on making calls and sending SMS with Raspberry Pi and Sim900
+
+Then run the game.py script. After a few seconds, you should see your camera's image view window with two rectangles. The left rectangle is for user movement and the right one is for Raspberry Pi movement. So, set your hand inside the rectangle and make a move. Recognizing your hand posture, Raspberry Pi also makes a movement and after comparing both movements, the winner is announced.
+
+This way you can play rock paper scissors game using Raspberry Pi, OpenCV and python.
+Items in the file: complete source and required images
+ The text you provided is a script that outlines the process for developing a rock-paper-scissors game using a trained model, streaming video, motion detection, and display functions. This script explains the loading of a trained model, capturing video input, creating rectangles for user and Raspberry Pi movement, processing image data, detecting motion, making decisions based on the detected motion, displaying game elements, and connecting the Raspberry Pi Camera module.
+
+The script essentially guides the reader through creating a program that allows users to play rock-paper-scissors against the Raspberry Pi using hand gestures and computer vision techniques. It provides details on setting up the environment, developing the game logic, and integrating the Raspberry Pi hardware.
+
+The final part of the script advises on how to run the game.py script, which will display the camera's image view window with two rectangles for user and Raspberry Pi movement, enabling the rock-paper-scissors game to be played using Raspberry Pi, OpenCV, and Python.  
+
+
+How to install OpenCV on Raspberry Pi with CMake (in 2 methods)
+How to install open cv on Raspberry Pi board
+In the early days of computers, their input was mouse and keyboard, and now they are even able to process video and images. The ability of a computer to extract, analyze and understand information from an image is called Computer Vision or CV for short. In recent years, computer vision has advanced greatly. Today, computers can not only recognize people and objects, but can also understand their nature and sense. All of this is made possible by advances in artificial intelligence and deep learning, which are trained with algorithms from similar images. Today, the ability to process images has advanced to such an extent that it is used in a reliable manner to use security, financial, etc. portals.
+The most common library used for computer vision is the OpenCV library. This is an open source library that can work on any operating system such as Windows, Linux and Mac. Installing OpenCV on the Pi is a difficult process, as it is very time-consuming and error-prone. So we tried to make this tutorial as simple as possible.
+See some site projects about OpenCV and Raspberry Pi:
+Arduino training course, ESP32 training course, STM32 training course, Electronics training course
+Pico board training course, Raspberry Pi training course, Altium Designer training course, do you want a course discount?
+AVR training course, Proteus training course, Internet of Things training course, board and electronic parts store
+• Social distance detection with Raspberry Pi and OpenCV
+• Driver drowsiness warning system with Raspberry Pi and OpenCV
+• CCTV camera motion detection with Raspberry Pi (Alert and OpenCV)
+• Eye, jaw, mouth detection with OpenCV and Raspberry Pi
+• Teaching how to make a QR code scanner with Raspberry Pi and OpenCV
+How to install OpenCV on Raspberry PI with Pip
+Before we begin, I assume that you have already installed the latest operating system on your Raspberry PI and have access to it via SSH.
+As we all know, Python has a package manager called pip that can be used to add Python libraries easily. Yes, there is also a way to use PIP to install OpenCV on the Pi in a few minutes, but unfortunately that didn't work for me, nor for many others. Also, installing via pip doesn't give us full control over the OpenCV library, but if you're looking for the fastest way, give it a try.
+Make sure pip is installed on your pi and updated to the latest version. Then enter the following commands one by one in your terminal
+sudo apt-get install libhdf5-dev libhdf5-serial-dev
+sudo apt-get install libqtwebkit4 libqt4-test
+sudo pip install opencv-contrib-python
+If this step is successful you should install OpenCV on your Pi, if this step is successful you can go to step 13 to check if OpenCV is installed correctly with Python. Otherwise, take a deep breath and start the tutorial below.
+Suggested article: TTS text-to-speech conversion with Raspberry Pi board
+Installing OpenCV 4 on Raspberry Pi using CMake
+In this method, we download the OpenCV source package and compile it on the Raspberry Pi using CMake. Some people like to install OpenCV on a virtual environment so that they can use different versions of Python or OpenCV on the same machine. But since I want to keep this article short, I will explain the easiest way.
+Step 1: Before we start we will make sure that the system is updated to the new version, for this enter the following command.
+sudo apt-get update && sudo apt-get upgrade
+If there is a newer version, you need to download the latest packages and install it. This process will take 15-20 minutes so be patient.
+
+Step 2: Next we need to update the apt-get package so that we can load CMake next.
+sudo apt-get update Step 3: After apt-get software update, we can download and install the CMake package using the following command.
+If you have any questions about this article, ask in the comments section
+sudo apt-get install build-essential cmake unzip pkg-config
+Your screen when installing CMake should look like the screen below.
+
+Step 4: Then install the Python 3 development headers using the following command.
+sudo apt-get install python3-dev
+It shows something like this.
+
+Step 5: The next step will be to download the OpenCV Zip file from GitHub. To do this, use the following command.
+wget -O opencv.zip https://github.com/opencv/opencv/archive/4.0.0.zip
+As you can see we are loading version 4.0.0.
+
+Step 6: OpenCV has pre-built packages called OpenCV contrib for Python that help us develop things easier. So let's download it using a similar command as shown below.
+wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/4.0.0.zip
+At this point, you should have downloaded two zip files named “opencv-4.0.0” and “opencv-rib-4.0.0” in your home directory. You can check it if you want to be sure.
+
+Step 7: Unzip the opencv-4.0.0 zip file using the command below.
+unzip opencv.zip
+
+Step 8: Using the line
+Step 8: Extract opencv_contrib-4.0.0 using command line.
+unzip opencv_contrib.zip
+
+Step 9: OpenCV needs numpy to work. So let's install it using the command below.
+pip install numpy
+
+Step 10: Now, we have two directories named “opencv-4.0.0” and “opencv_contrib-4.0.0” in our home directory. The next step will be to prepare the Opencv library, to do this we need to create a new directory called "build" inside the Opencv-4.0.0 directory. To do the same, follow the instructions below.
+cd~/opencv
+mkdir build
+cd build
+
+Step 11: Now, we need to run CMake for OpenCV. This is where we can configure how OpenCV is prepared. Make sure you are in “~/opencv-4.0.0/build” path. Then copy the following and previous lines into the terminal window.
+cmake -D CMAKE_BUILD_TYPE=RELEASE \
+ -D CMAKE_INSTALL_PREFIX=/usr/local \
+ -D OPENCV_EXTRA_MODULES_PATH=~/opencv_contrib-4.0.0/modules \
+ -D ENABLE_NEON=ON \
+ -D ENABLE_VFPV3=ON \
+ -D BUILD_TESTS=OFF \
+ -D WITH_TBB=OFF \
+ -D INSTALL_PYTHON_EXAMPLES=OFF \
+ -D BUILD_EXAMPLES=OFF ..
+
+It should be configured without any errors and see the text "Configuring done" and "Generating done" as shown below.
+Suggested article: LED control with Node.js on Raspberry Pi web server
+
+If there is an error in this process, make sure that you have typed in the correct path and that you have two directories named "opencv-4.0.0" and "opencv_contrib-4.0.0" in your home directory.
+Step 12: This is the longest step. Again make sure you are in the path “~/opencv-4.0.0/build” and use the following command to compile OpenCV.
+Make-j4
+
+By starting, you can see the progress of the operation in percentage. This process will take about 3-4 hours and if it is built completely you should see a screen like the image above. The “make –j4” command uses all four cores to compile OpenCV.
+For me it didn't work even after waiting for an hour and so I had to stop the process and do it again using "make -j1" and it worked. Using make -j1 only uses pi core and takes longer than j4, so it is recommended to use j4 and then make j1 because most of the compilation is done with j4.
+Step 13: If you reach this step, it means you have completed 99% of the process. The last step will be to install libopecv using the following command.
+sudo apt-get install libopencv-dev python-opencv
+
+Step 14: Finally, you can check this library by running a simple Python script. Type python and try cv2 import as shown below. You should not receive an error when doing this.
+
+If you get this page, you can do your own project with OpenCV. I hope this article can help you in installing OpenCV on Raspberry Pi, if you face any problems, let me know in the comments section and I will try my best to fix it. You can also use our forums for more technical questions
+
+# STM32 programming tutorial with Keil & STM32Cube MX
+hello We have prepared STM32 programming training with Keil uVision and STM32Cube MX.
+Coding training on STM32 board with KIL
+STM32 microcontrollers that use the ARM Cortex M architecture are popular today and are used in many projects due to their many features, low cost, and high performance. We have already taught STM32 programming with Arduino. Programming STM32 with Arduino IDE is very simple, because there are many libraries for different sensors to do any task and we just need to add those libraries in the program. ARM programming with Arduino is easy and may not require deep learning about ARM processors. So now we are in the ARM programming phase. With this, we can not only improve our code structure, but also save memory space by not using unnecessary libraries.
+STMicroelectronics introduced a tool called STM32Cube MX that generates native code based on the selected STM32 board and peripherals. So we don't need to worry about programming for the main driver and peripherals. In addition, this generated code can be used in Keil uVision for editing according to the need. Finally, this code is loaded into the STM32 using the ST-Link programmer from STMicroelectect.
+In this tutorial, we will learn how to program on the blue tablet or STM32 board using Keil uVision and finally we will design a project that turns on the LED by pressing the key. We generate the code using STM32Cube MX and then edit and load the code using Keil uVision on STM32F103C8. Before the details, we first get to know ST-LINK programmer and STM32CubeMX software tool.
+Arduino training course, ESP32 training course, STM32 training course, Electronics training course
+Pico board training course, Raspberry Pi training course, Altium Designer training course, do you want a course discount?
+AVR training course, Proteus training course, Internet of Things training course, board and electronic parts store
+ST-LINK V2 programmer
+ST-LINK / V2 is a program debugger and programmer for STM8 and STM32 microcontroller families. Using this ST-LINK, we can upload code to STM32F103C8 and other STM8 and STM32 microcontrollers. Single wire communication modules (SWIM) and JTAG / serial wire debugger (serial SWD) are used to communicate with any STM8 or STM32 microcontroller that are on the same board. Since STM32 programs use the full USB interface to communicate with Atollic, IAR, Keil or TASKING integrated development environments, we can use this hardware to program STM 8 & STM32 microcontrollers.
+
+Above is the image of the ST-LINK V2 dongle from STMicroelectronics, which supports the full range of STM32 SWD, debugger and simple 4-wire interface (including power). This dongle is available in various colors. The body is made of aluminum alloy. This dongle has a blue LED that is used to view the working status of ST-LINK. As we can see in the picture above, the names of the pins are clearly marked on the body. You can flash programs with Keil software on STM32 microcontrollers. Therefore, in this tutorial, we will see how this St link programmer can be used to program STM 32 microcontrollers. The picture below shows the pins of the ST-LINK V2 module.
+Suggested article: Sending and receiving SMS with STM32 and Sim800 microcontroller
+
+What is STM32CubeMX?
+The STM32CubeMX tool is part of STMicroelectronic's STMCube. This software makes development easier by reducing development time and cost. STM32Cube includes STM32CubeMX, a graphical configuration tool that allows generating C source code. This code can be used in different development environments such as keil uVision, GCC, IAR, etc. Download the STM32CubeMX tool
+STM32CubeMX has the following features:
+• Solve pin problems
+• Help to set the clock tree
+• Electricity consumption calculator
+MCU peripheral integration such as GPIO pins, USART and...
+• Configure the MCU environment for middle stacks such as USB, TCP/IP and...
+Required parts
+1. STM32 – Development Board (BluePill) (STM32F103C8T6)
+2. ST-LINK V2 programmer
+3. Button
+4. LEDs
+Get the required parts from the Ironex parts store.
+STM32 startup circuit with Keil
+The image below shows the circuit schematic of this project in which we connect a button and an LED to the STM32 board.
+
+Connection between ST-LINK V2 and STM32F103C8
+Here the STM32 Blue Pill board is powered by the ST-LINK connected to the computer's USB port. Therefore, it is not necessary to power the STM32 separately. The table below shows the connection between ST-Link and the blue pill board.
+STM32F103C8 ST-Link V2
+GND GND
+SWCLK SWCLK
+SWDIO SWDIO
+3.3V 3.3V
+At the push of a button, an LED is used to display the output from the Blue Pill screen. The LED anode is connected to the PC13 pin of the STM32 board and the base cathode is connected to GND.
+If you have any questions about this article, ask in the comments section
+A button is connected to pin PA1 of STM32 board to provide input. We also need to use a 10 kOhm resistor because there may be noise when the button is released and the LED will turn on again. One end of the button is connected to ground and the other end is connected to pin PA1 and a resistor of up to 10k is also connected to 3.3V
+Create program in STM32 using
+Program development in STM32 using Keil uVision and ST-Link
+Step 1: First, install all device drivers for ST-LINK V, STM32Cube MX & Keil uVision software tools and necessary packages for STM32F103C8.
+Step 2: Open STM32Cube MX.
+Step 3: Then click on New Project.
+
+Step 4: Search and select your STM32F103C8 microcontroller.
+
+Step 5: – Now STM32F103C8 pins will appear, here we can do pin settings. We can also choose our pins according to our project in the accessories section.
+
+Step 6: You can also directly click on the pin and a list will appear, now select the required pin configuration.
+
+Step 7:- For this project we choose PA1 as GPIO input. Then we select PC13 pin as GPIO output and SYS debug SERIAL WIRE. Selected and configured pins appear in green. You can see in the picture below.
+Suggested article: What is STM microcontroller? STM32 programming
+
+Step 8: On the Configuration tab, select GPIO as shown below to set the GPIO pins to the pins we have selected.
+
+Step 9: In the next step in the pin configuration window, we can configure the User Label for the pins we use, i.e. user defined pin names.
+
+Step 10: After that click on Project >> Generate Code.
+
+Step 11: Now the project settings window will appear. In this box, select the name and location of your project and select the development environment. We are using Keil so select MDK-ARMv5 as IDE.
+
+Step 12: On the Code Generator tab, copy only the required library files and then click OK.
+
+Step 13: – Now the code generation window will appear. Select Open Project to have the code generated in Keil uvsion automatically open the project.
+
+Step 14: Now Keil uVision will open with our generated code on STM32CubeMx with the same project name with the necessary library and code set for the selected pins.
+
+Step 15: Now we just need to insert the logic to perform some action on the output LED (PC13 pin) when the button is pressed on the GPIO input (PA1 pin). So select main.c to enter some code in it.
+Program development in STM32 using Keil uVision and ST-Link
+Step 1: First, install all device drivers for ST-LINK V, STM32Cube MX & Keil uVision software tools and necessary packages for STM32F103C8.
+Step 2: Open STM32Cube MX.
+Step 3: Then click on New Project.
+
+Step 4: Search and select your STM32F103C8 microcontroller.
+
+Step 5: – Now STM32F103C8 pins will appear, here we can do pin settings. We can also choose our pins according to our project in the accessories section.
+
+Step 6: You can also directly click on the pin and a list will appear, now select the required pin configuration.
+
+Step 7:- For this project we choose PA1 as GPIO input. Then we select PC13 pin as GPIO output and SYS debug SERIAL WIRE. Selected and configured pins appear in green. You can see in the picture below.
+Suggested article: What is STM microcontroller? STM32 programming
+
+Step 8: On the Configuration tab, select GPIO as shown below to set the GPIO pins to the pins we have selected.
+
+Step 9: In the next step in the pin configuration window, we can configure the User Label for the pins we use, i.e. user defined pin names.
+
+Step 10: After that click on Project >> Generate Code.
+
+Step 11: Now the project settings window will appear. In this box, select the name and location of your project and select the development environment. We are using Keil so select MDK-ARMv5 as IDE.
+
+Step 12: On the Code Generator tab, copy only the required library files and then click OK.
+
+Step 13: – Now the code generation window will appear. Select Open Project to have the code generated in Keil uvsion automatically open the project.
+
+Step 14: Now Keil uVision will open with our generated code on STM32CubeMx with the same project name with the necessary library and code set for the selected pins.
+
+Step 15: Now we just need to insert the logic to perform some action on the output LED (PC13 pin) when the button is pressed on the GPIO input (PA1 pin). So select main.c to enter some code in it.
+Step 16: – Now add the code in While1.
+while (1)
+{
+ if(HAL_GPIO_ReadPin(BUTN_GPIO_Port,BUTN_Pin)==0) //=> button pressing detection
+{
+ HAL_GPIO_WritePin(LEDOUT_GPIO_Port,LEDOUT_Pin,1); //Create output when the button is pressed
+}
+
+otherwise
+{
+ HAL_GPIO_WritePin(LEDOUT_GPIO_Port,LEDOUT_Pin,0); //Disable the output when the button is released
+}
+}
+
+Step 17: – After finishing editing the code, click on Options for Target and then go to Debug tab and select ST-LINK Debugger.
+
+Also, on the Settings button and then under the Flash Download option, check the Reset and Run option and click "ok".
+
+Step 18: Now click on the Rebuild icon to rebuild all target files.
+
+Step 19: Now you can connect the ST-LINK to the computer by connecting the circuit and click on the DOWNLOAD icon or press F8 to flash the STM32F103C8 with the code you generated.
+
+Step 20: You can see the flashing indicator at the bottom of the keil uVision window.
+
+Final result of STM32 programming with Keil
+Now when we press the button, the LED turns on and when we release it, the LED turns off.
+
+Full code of the flashing project in Keil
+The main part that we have added in the generated program is given below. The following code should be included in the while 1 of the main.c program created by STM32CubeMX. You can go back to step 15 and step 17 to learn how to add it in the main.c program.
+while (1)
+{
+ if(HAL_GPIO_ReadPin(BUTN_GPIO_Port,BUTN_Pin)==0) //=> button pressing detection
+{
+ HAL_GPIO_WritePin(LEDOUT_GPIO_Port,LEDOUT_Pin,1); //Create output when the button is pressed
+}
+
+otherwise
+{
+ HAL_GPIO_WritePin(LEDOUT_GPIO_Port,LEDOUT_Pin,0); //Disable the output when the button is released
+}
+}
+The complete main.c code is given below. In addition, you can see our complete collection of STM32 projects.
+/* Includes ------------------------------------------------------------- -------------------*/
+#include "main.h"
+#include "stm32f1xx_hal.h"
+/* USER CODE BEGIN Includes */
+/* USER CODE END Includes */
+/* Private variables ---------------------------------------------- -----------*/
+/* USER CODE BEGIN PV */
+/* Private variables ---------------------------------------------- -----------*/
+/* USER CODE END PV */
+/* Private function prototypes --------------------------------------------- --*/
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+/* USER CODE BEGIN PFP */
+/* Private function prototypes --------------------------------------------- --*/
+/* USER CODE END PFP */
+/* USER CODE BEGIN 0 */
+/* USER CODE END 0 */
+/**
+ * @brief The application entry point.
+ *
+ * @retval None
+ */
+int main(void)
+{
+ /* USER CODE BEGIN 1 */
+ /* USER CODE END 1 */
+ /* MCU Configuration------------------------------------------------------------ ------------*/
+ /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
+ HAL_Init();
+ /* USER CODE BEGIN Init */
+ /* USER CODE END Init */
+ /* Configure the
+
+Teaching ESP32 programming with Micropython
+01/29/1402
+Approximate reading time is 7 minutes
+
+Contents [show]
+MicroPython is a lightweight version of the Python programming language developed for programming microcontrollers, SOCs, and other embedded system devices. MicroPython was created to enable developers to take advantage of the "easy to learn and use" nature of Python to develop embedded systems. Since Python is now the primary introductory language in most schools and is one of the most popular and widely used programming languages ​​around the world, through Micro Python, a large number of Python users are able to program for microcontrollers without the need to do not have C Micro Python is a smaller implementation of Python 3 and therefore compatible with Python 3 commands.
+While MicroPython is not yet at the same level of popularity as C and C++ for embedded system development, its popularity has increased with the growing number of supported microcontrollers, IDEs, and development boards. For today's tutorial, we will look at one of these boards, which can be written using MicroPython. We will be looking to develop code for the ESP32 using MicroPython.
+Arduino or Micropython?
+One of the most proven and easiest ways to program the ESP32 is to use the Arduino IDE. C and C++ have been popular languages ​​for developing embedded systems for decades, and the Arduino version of the language has made it even easier, making it popular among developers and hobbyists due to the ease of writing code. In addition, Arduino has one of the largest communities in the world with new libraries, software fixes, new board support, and more. All this makes Arduino a powerful tool for programming embedded system boards.
+One of the good features of Micro Python is that you can run the code on the board without uploading the code and increase the speed of your operation. MicroPython, on the other hand, is relatively new. Its user community is growing and although it supports various libraries and boards, its power cannot be compared to Arduino. MicroPython is basically a pure version of Python, which is one of the most popular programming languages ​​in the world, and thus, any problem that cannot be solved by the MicroPython community, you can take help from the Python community.
+Arduino training course, ESP32 training course, STM32 training course, Electronics training course
+Pico board training course, Raspberry Pi training course, Altium Designer training course, do you want a course discount?
+AVR training course, Proteus training course, Internet of Things training course, board and electronic parts store
+Now, regardless of which one is better, let's run the flashing LED project with MicroPython for ESP32.
+Micropython code execution circuit for ESP32
+Schematic of using ESP32 with MicroPython to blink LED is simple. Connect the parts as shown in the schematic below.
+Suggested article: Viewing resource capacity on the Internet with ESP8266 + warning
+
+Required parts
+To make the flashing LED project, we need the following components.
+• DOIT ESP32 DevKit version 1
+• LEDs
+• 100 Ohm resistance
+• Jumper wires
+• Board
+Get the required parts from the Ironex parts store.
+You can use any of the other ESP32 based boards instead of the DOIT ESP32 DevKit V1 and you can choose to work with the on-board LED or with an external LED.
+The next section contains some setup and setup that we need to do in order to easily program the ESP32 using MicroPython.
+Flash ESP32 with MicroPython
+The first thing we need to do is to flash our ESP32 with MicroPython firmware. This process is similar to how to flash ESP-12e based boards with NodeMCU firmware.
+Step 1: We start by downloading the latest MicroPython operating system bin file from the MicroPython download page. Search for ESP32 in the given link, you will see different items that you can choose according to the board you have. Then download the latest version marked with [latest].
+Step 2: With the download done, the next step is to flash your board with the firmware. To do this, you'll need to put your board into bootloader mode and then use a tool to flash the operating system from your PC onto the board.
+The exact method of putting the board into bootloader mode depends on the type of board you are using. Most boards have a USB connector, a USB serial converter, and DTR and RTS pins that are wired in a special way, so it's easy to install an operating system on them. But if your board does not have a USB connector, you must press the boot button or connect the IO0 pin to GND and turn the board on and off.
+For DOIT DevKit board, you need to press the boot button when you want to flash the board. To flash the ESP32 with the MicroPython operating system, we will use esptool.py as our copy tool.
+If you have any questions about this article, ask in the comments section
+To work with esptool.py, you must have Python 2.7, Python 3.4, or newer installed on your computer. We recommend using the latest version of Python 3, which you can download from the Python website.
+do
+With Python 3 installed, you can go to the official esp repository and download the latest stable version of esptool.py or open a terminal window to install it via pip.
+To install via pip, open a terminal window and run the following command:
+pip install esptool
+If the above doesn't work, change it to one of the commands below and try again.
+pip3 install esptool
+python -m pip install esptool
+pip3 install esptool worked for me. After installation, your terminal should look like the image below.
+Suggested article: Training to install and work with Node-RED in Raspberry Pi and LED control
+
+Now you need to launch esptool by entering the command esptool.py in the terminal.
+esptool.py
+If your installation went well, you should see a lot of messages like the one below.
+
+Step 3: For best results, it is recommended to first wipe the entire flash of your device before installing the new MicroPython firmware. To do this, hold down the boot/flash button on your ESP32 and run the following command.
+esptool.py --chip esp32 erase_flash
+You can remove your hand as soon as the process starts. ESPtool will automatically detect the port your ESP32 is on.
+You should now see messages similar to this upon completion.
+
+Step 4: Finished wiping the flash memory, now you can flash the board with the new firmware by running the command.
+esptool.py --chip esp32 --port <board port> write_flash -z 0x1000 <bin file location>
+Fill in the slots in the operating system with your serial port and the location of the bin file we downloaded earlier. To make things easier, you can change the directory to the same folder as the bin file, so you only need to enter the filename as the location. For example:
+esptool.py --chip esp8266 --port COM4 write_flash --flash_mode dio --flash_size detect 0x0 esp32-ppp-fix.bin
+By doing this, you should see hints that your board has been successfully flashed with MicroPython Firmware and you should be able to program the board using the MicroPython IDEs.
+Install Thonny IDE for ESP32
+After installing the operating system, you need to install a Python IDE. IDEs provide an easy way to develop and manage your project code. There are many Python IDEs with MicroPython support, and you can choose any of them for your project. For today's tutorial, we'll be using Thonny. Thonny is very popular among programmers and has become even more popular because it is one of the Python development environments used in the Raspberry Pi's Raspbian operating system. After downloading Thonny, install it.
+
+To program embedded devices with Thorny, the interpreter must be set to MicroPython. You can do this by going to Tools > Options and selecting an interpreter. You should see a window similar to the image below. Select MicroPython to run the code and select the port your board is connected to.
+
+With this done, you are now ready to program your board using the IDE.
+Flashing LED program with Micropython
+Blink is to the hardware world what Hello World is to the software world. This project is not complex enough to show you how powerful MicroPython is, but I believe it is good enough as a first MicroPython project.
+MicroPython does not come with the full Python libraries or modules commonly referred to in Python, but it does come with additional libraries that allow it to interact with low-level hardware to control GPIOs and interact with interfaces. One of these modules is the machine module. The functions in the machine module allow direct and unlimited access and control of hardware blocks such as CPU, timers, buses, etc. in an embedded system. This is a module that you will surely use in all your MicroPython projects.
+Suggested article: Smart home with Node Red on Raspberry Pi
+First, create a new file and save it as main.py. main.py is loaded every time the board running MicroPython is powered up. It is just like the loop function in Arduino.
+We start by importing the modules that will be used for our code. In our project, the module is machine and time.
+from machine import Pin
+from time import sleep
+pin helps us address specific GPIOs while sleep helps us create pauses like the delay() function in Arduino.
+By writing the following code, we determine which base we use and it is in output mode.
+led = Pin(2, Pin.OUT)
+Then we write the while loop. The while loop configuration in MicroPython is similar to the void loop function in Arduino. Here we turn the LED "on" for 0.5 seconds and "off" for another 0.5 seconds.
+while True:
+ led.high()
+ sleep(0.5)
+ led.low()
+ sleep(0.5)
+The complete code is as follows:
+from machine import Pin
+from time import sleep
+
+led = Pin(2, Pin.OUT)
+
+while True:
+ led.high()
+ sleep(0.5)
+ led.low()
+ sleep(0.5)
+Then upload it to your board by going to "Devices" and selecting "upload current script as main.py script".
+
+You should then see your board with the LED light flashing intermittently.
+
+MicroPython is certainly easier to work with than Arduino C, but it may take some time to reach its full potential as it still lacks the level of support associated with C and
+
+# Using Edge Impulse to detect fever with Arduino
+07/16/1400
+Approximate reading time is 9 minutes
+
+Contents [show]
+Edge Impulse Studio can be used to train machine learning models such as object classification, cough detection, speech recognition and many more. In this tutorial, we are going to use Edge Impulse Studio to train a simple signal-based model to detect whether a person has a fever or not.
+What is Edge Impulse?
+Edge impulse helps manufacturers reduce the entire process of connecting hardware, collecting data from it, preprocessing it, and then creating models with it from days or months to hours. The platform is free for personal projects and very easy to use. It has an intuitive user interface that guides you through the steps of building a model without exposing you to unnecessary complications. At the same time, it ensures that it gives you enough options to collect/upload your own data and customize the entire model and its training process.
+Why do we use Edge Impulse models for this project?
+We will use the Arduino Nano 33 IoT because it can be easily integrated with the library released by edge impulse. To do this project, we integrate the MLX90614 sensor to measure the temperature of a person's fingers and predict whether he has a fever or not. While at first I thought this project might be very simple using thresholds, it is not and the project is more complex for the following reasons:
+1. The ambient temperature and the distance between the finger and the mlx sensor change the measured value of the temperature of the object significantly.
+2. A person's body temperature may be slightly different on different days
+3. Different people with different ethnic backgrounds also have different characteristics and slightly different body temperatures
+4. Finger temperature is several degrees lower than body temperature
+MLX90614 connection circuit to Arduino Nano 33 IoT
+The schematic is very simple. We will use mlx90614 and 1.3 inch OLED I2C display. Connections are very simple as both modules (MLX90614 and OLED display) work with I2C communication.
+Arduino training course, ESP32 training course, STM32 training course, Electronics training course
+Pico board training course, Raspberry Pi training course, Altium Designer training course, do you want a course discount?
+AVR training course, Proteus training course, Internet of Things training course, board and electronic parts store
+
+Arduino Nano 33 IOT Display/MLX90614 sensor
+5V VCC
+GND GND
+A4 SDA
+A5 SCL
+Get the required parts from the Ironex parts store.
+Teaching fever detection model with Edge Impulse Studio
+Training a machine learning model with Edge Impulse is very simple and can be completed in 7-8 steps. All steps of model training with Edge Impulse are explained below:
+1. Register on the website and create your project
+The first step is to register on the edge Impulse website. After registration, you will see a dashboard page that shows you the main flow of model development in edge impulse. You will be prompted to create and name a new project. As mentioned in the project information, select the labeling method as “one label per data item” and the delay calculations on Cortex-M4F 80 MHz. For vision-based models, you can select the bounding boxes option. Many other processors and boards are supported by the edge impulse platform.
+Suggested article: How to control the stepper motor with Arduino?
+
+2. Data collection using Data-Forwarder
+If you click on the "LET'S COLLECT SOME DATA" button, you will see a variety of options.
+
+We use the data-forwarder option which uses python3, node.js and cli to collect data from your hardware device and then forwards the collected information to the edge impulse platform. First, load the provided data collection script into the Arduino 33 IOT board settings. While the device is still connected to your laptop/desktop, open a cmd or command prompt and enter the following command into it.
+
+$ edge-impulse-data-forwarder
+The sender of the data should then respond accordingly:
+Edge Impulse data forwarder v1.5.0
+? What is your user name or e-mail address (edgeimpulse.com)? <enter registered email-id>
+? What is your password? <enter password>
+endpoints:
+ Websocket: wss://remote-mgmt.edgeimpulse.com
+ API: https://studio.edgeimpulse.com
+ Ingestion: https://ingestion.edgeimpulse.com
+[SER] Connecting to /dev/tty.usbmodem401203
+[SER] Serial is connected
+[WS] Connecting to wss://remote-mgmt.edgeimpulse.com
+[WS] Connected to wss://remote-mgmt.edgeimpulse.com
+? To which project do you want to add this device? <project_name>
+? 3 sensor axes detected. What do you want to call them? Separate the names with ',': <axis1,axis2,axis3,…>
+? What name do you want to give this device? <device_name>
+[WS] Authenticated
+Enter the registration credentials, the name of the project you just created, and name the 2 axes identified as O_Temp and A_Temp respectively. The data frequency should be detected automatically. This would be:
+If you have any questions about this article, ask in the comments section
+
+If you return to the edge impulse user interface, you should see the name of the newly added device as shown below-
+
+The green dot indicates that the device is active and connected. Now, select Data acquisition on the left and you can see the following screen:
+
+Enter the desired sample length and then click on the Start Sampling button. The counter should start working instead of the sampling button that was just pressed, and after the entered time, the collected data will be displayed as shown. You can rename and label the sample by clicking on the 3 dots to the right of each collected sample. To view the details of the collected sample, just click on it.
+
+Some important points:
+• Collect at least 9 minutes of data divided equally into three classes – fingerless, healthy and febrile.
+• Collect 1 100 second sample for each of the three tags each day for several days so that your model works for a variety of ambient temperatures.
+• For the first class, just lift and leave your finger on the sensor. In the second case, move your finger 1 cm away from the sensor and stick your finger to the sensor for the fever label.
+• The old screen should show you the temperature measured by the sensor.
+• Fingers are 5-6°F below body temperature and we assume that the fever threshold is 100°F.
+• You can also collect test data by selecting the “Test data” tab next to the currently selected “Training data” tab. You can also use the rebalance data button and automatically split the data set in the ratio of 80:20.
+• For test data, a sample length of 10 seconds should be appropriate.
+• Edge Impulse allows you to split and crop your samples too, so remove any erroneous data before moving on.
+Suggested article: Color change pot project with touch based on Arduino board
+3. Creating an impulse
+Impulses are used to train the model from the collected signal values. Select the Impulse design tab on the left and you will see a new page. Set it to look like this:
+
+Look at the different options and blocks available. You can choose blocks based on your data and even choose the axes you want to train the data on. Edge impulse explains each block and its usage. We will use raw data because it allows us to get the values ​​directly from our sensor to the model API and it also saves processing time. Keep the frequency at two hertz. This means that we feed sensor data to the model every 500 milliseconds. Note that this does not mean that we are reading the sensor data at the same rate. We might read the data faster to average it before feeding it to the model. Therefore, our sample length will be 1/frequency or 500 mm. Check both items – O_Temp and A_Temp in the raw data block because we want our model to work at different ambient temperatures.
+4. Create features
+Now we proceed to create features from our raw data. Under impulse design, when you save the impulse you just created, the circle next to “Create impulse” should turn green, indicating that your impulse has been created. Depending on the blocks you have added, you should also see additional tabs like "Raw data". When you click on the Raw data tab, the following screen should open:
+If you look closely, there is nothing but O_Temp, A_Temp or 1 sample that we are collecting. This seems to be true because we used a frequency of 2 and a window size of 500 ms. Select “Generate features” on the top tab, which leads to this page:
+
+You don't see any charts because we haven't created any features yet. Click the “Generate features” button and you will see the implese feature start learning from the collected data. It basically runs a K-means algorithm and clusters data with the same label together. You should be able to make a 3D diagram on the side
+. Architecture and model education
+Select the NN Classifier tab on the left. You will be able to see the following window, keep the default settings as they are or change them a bit. Click on start training and within a few minutes you should do 50 cycles and it will show you the accuracy of the model. Since this is a relatively simple project, we should see a very high accuracy of 98.
+
+6. Testing the model on test samples
+Suggested article: Identifying original and fake Arduino board (original or fake Arduino)
+After this, we can check how the model works using the live classification tab.
+
+You can take a new sample by attaching a registered data collection device using the forwarder, or you can classify an existing test sample.
+You will be able to see how each new/test sample window is classified visually and in a report-like format in the "Detailed result" section.
+
+7. Calculation of test accuracy
+Now we will see how the model performs on the test data we have collected in general. Select the "Model Testing" tab and press the "Classify all" button.
+
+You should see the accuracy of the test in the form of a matrix.
+8. Versioning and deployment
+Versioning helps you create multiple versions of the same model and project. Finally, we go to the Deployment tab. In the create a library section, select the Arduino library option and then go down. You will see the optimization options available for NN classification. Press the Analyze optimizations button to see which optimization works best. In our case, float32 works better so we build the library using that.
+
+Click the build button and a zip file will automatically start downloading.
+
+Congratulations! You have successfully created your first edge impulse model!
+Deploying the trained model in Arduino Nano 33 IoT
+Now we will use the downloaded library to classify samples. The first step is to open the Arduino IDE, go to the "Sketch" section, select "Include Library" and import a .zip file. You should be able to see the library in the examples folder. Our inference file is static_buffer. If you remember, in step 4 when we created the properties, we can see 2 types – raw and dsp or processed which were the same in our case. The static buffer instance uses these properties to perform inference on a particular instance window. Since we are using raw features, we can directly convert this example into a live inference example by replacing the values ​​copied into the feature array from the edge impulse UI with values ​​measured by the MLX sensor used. You can download all required libraries from the download file at the bottom of the page.
+
+So, the following array
+static const float features[] = {
+ // copy raw features here (for example from the 'Live classification' page)
+ // see https://docs.edgeimpulse.com/docs/running-your-impulse-arduino
+};
+Inside the static_buffer example has been replaced with
+Object = mlx.readObjectTempF();
+Ambient = mlx.readAmbientTempF();
+ ei_printf("Edge Impulse standalone inferencing (Arduino)\n");
+features[0] = Object;
+features[1] = Ambient;
+In our modified version
+It allows us to run our classifier live on the Arduino Nano 33 IOT. The rest of the code requires a deep understanding of Tf-lite and impulse edge APIs, which is beyond the scope of this project. After finishing the changes, select Arduino 33 IoT in the Board section and upload the code. After loading the code, open the serial monitor and the output will appear as below-
+
+
+As you can see, the inference time is only 3 milliseconds, which is great. Our model works very well even on different days in different ambient temperatures. This way you can use Edge Impulse Studio to train a custom machine learning model.
+Items in the file: complete source, library files
+5 wearable technologies you should know about
+11/18/2019
+Approximate reading time is 4 minutes
+
+Contents [show]
+With the constant advancement of technology, the most popular technology that has emerged now is the wearable gadgets made with technology. Many mobile phone companies like Apple, Samsung, Sony have supported smartwatches that provide information about everything your smartphone gives without looking at it.
+In addition to smartwatches, there are many tech wearables that are capable of doing just about anything, such as providing injury information, health, safety, relaxation tools, and more. With the help of these wearable tools, everything can be done very easily. Let's take a look at this year's top 5 wearable tech gadgets worth checking out.
+Google Glass
+
+With Google Glass technology, which is the best alternative to a smartphone, you can take HD photos and videos. In addition, this technology also allows you to send messages and see information about trending topics on social networks without checking your phone over and over again. This technology has a small screen and a touch screen to control it. So this wearable headset is the perfect replacement for a smartphone that does everything a smartphone can do.
+Arduino training course, ESP32 training course, STM32 training course, Electronics training course
+Pico board training course, Raspberry Pi training course, Altium Designer training course, do you want a course discount?
+AVR training course, Proteus training course, Internet of Things training course, board and electronic parts store
+Apple Watch
+
+This wearable is primarily supported by the iPhone. The most attractive product you can wear on your wrist. The Apple Watch pairs with the iPhone via Bluetooth, and you can then call and talk directly from your wrist, but add call functionality isn't available, so you'll have to go to the smartphone for that.
+Do you want to be aware of your health?
+With this wearable product, you can check your heart rate, calories burned, fitness level. But no GPS enabled for fitness.
+iPhone-compatible apps are available on the smartwatch, such as messaging, games, Gmail, and more. We can receive notifications such as Facebook messages, alerts, etc. directly on the smart watch, but it does not have the ability to edit text messages.
+This tool is not compatible with other smart phones and the iPhone must be close to the tool for its full functionality. Although other companies have also launched their own smartwatches that can be paired with their mobile phones.
+Skully AR-1 helmet
+
+Technology has advanced so much that there are not only wearable smart watches but other wearable technologies as well. One of them is the Skully AR-1 bike helmet.
+Recommended article: What is MQTT? Complete training of MQTT protocol architecture
+Equipped with Google Glass features, this smart cover guides you with GPS and 180-degree rear view camera navigation. With this smart technology you can do a manual navigation.
+Is your phone and music louder while riding? Control it from your helmet without the risk of using your phone. Protect yourself from the sun's glare with the help of a sun shade screen at the touch of a button.
+The biggest disadvantage of this technology is the weight of the technology. It may feel like a burden on your head because it is heavier than normal cases.
+If you have any questions about this article, ask in the comments section
+Muse
+
+Place the headband right above your ear to meditate with ease. For healthy inner peace, you experience a great sense of relaxation, like when you meditate.
+This app gives you nature, regardless of where you are, it plays the rhythm of music, rain forests and waves hitting the beach and provides you with a great sense of relaxation.
+It can help you boost your energy by using the perfect meditation headband. It also controls you from diverting your focus to other things by increasing the intensity of sounds. So whenever you get out of rhythm and tend to think about something else, the app touches it and brings you back into focus. So you get a deeper peace with this tool that you will notice the change yourself.
+What is electricity? Electricity flow in simple language
+08/28/2019
+Approximate study time 17 minutes
+
+Contents [show]
+Electricity is all around us (power technology like our cell phones, computers, lights, soldering irons and air conditioners) It's hard to escape electricity in our modern world. Even when you want to run away from electricity, you can't, because electricity is everywhere, from lightning to the synapses in our nervous system.
+But what is electricity? This is a very complex question, and the more you delve into it, the more questions you will come up with. You should know that there is no definitive answer to the question "what is electricity?" We can only know an abstract representation of how electricity interacts with the surrounding environment.
+Electricity is a natural phenomenon that occurs throughout nature and has various forms. In this tutorial we will focus on the flow of electricity ie the things that power our electronic devices. Our goal is to understand how electricity flows through wires, lights LEDs, turns motors, and powers communication devices from a power source.
+Be sure to read the article of the inventor of electricity. Electricity is briefly defined as the flow of electric charge, but there is much more behind this simple statement. Where do these electric charges come from? How to move them? Where are they transferred? How does an electric charge cause things to move mechanically or light up?
+Arduino training course, ESP32 training course, STM32 training course, Electronics training course
+Pico board training course, Raspberry Pi training course, Altium Designer training course, do you want a course discount?
+AVR training course, Proteus training course, Internet of Things training course, board and electronic parts store
+So there are many questions! To begin to explain what electricity is, we need a higher magnification of matter and molecules.
+It can be said that this article is the most complete article you can find about electricity. It may take some time to read this article, but after reading it, you will be completely familiar with the concept of electricity. Everything related to the nature of electricity will be told from beginning to end.
+Journey to the world of atoms
+To understand the principles of electricity, we need to start by focusing on atoms (one of the main building blocks of life and matter). Atoms exist in over a hundred different forms as chemical elements such as hydrogen, carbon, oxygen and copper. Different types of atoms can combine to form molecules, creating matter that we can physically see and touch.
+Atoms are tiny and up to 300 picometers long. A copper penny (if it is truly made of 100% copper) has 10.222 atoms (32,000,000,000,000,000,000,000,000,000 atoms) of copper in it.
+Even the atom is not small enough to explain the operation of electricity. We need to go down to a lower level and look at the building blocks of atoms: protons, neutrons, and electrons.
+Atomic blocks
+An atom is made up of three separate particles: electrons, protons and neutrons. Each atom has a central nucleus, where protons and neutrons are highly concentrated. A group of electrons are circulating around the nucleus.
+ A very simple atomic model. This is not to scale but is useful for understanding how an atom is made. The core of protons and neutrons is surrounded by spinning electrons.
+Each atom must have at least one proton. The number of protons in an atom is important because it determines what chemical element this atom represents. For example, an atom with only one proton is hydrogen, an atom with 29 protons is copper, and an atom with 94 protons is plutonium. This number of protons is called the atomic number of the atom.
+The nucleus of protons, neutrons, follows an important purpose. They hold protons in the nucleus and determine the isotope of an atom. They are not critical to our understanding of electricity, so let's not worry about them for this tutorial.
+Electrons are critical to working with electricity (notice a common theme in their names?) At equilibrium, an atom will have the same number of electrons as protons. As in the boron atom model below, a nucleus with 29 protons (making it a copper atom) is surrounded by 29 electrons.
+ As our understanding of atoms has evolved, so has the way we model them. The Bohr model is very useful for understanding electricity
+The electrons of an atom are not permanently attached to the atom. The electrons in the outer orbit of the atom are called valence electrons. With enough force, a valence electron can be released from the orbit of the atom. Free electrons allow us to move charge, which is what makes up electricity.
+Electric charge flow
+As we mentioned at the beginning of this tutorial, electricity is defined as the flow of electric charge. Electric charge is a property of matter (just like mass, volume, or density) and it can be measured. Just as you can determine the mass of something, you can measure its electrical charge. The basic concept of electric charge is that it can exist in two types: positive (+) or negative (-).
+If you have any questions about this article, ask in the comments section
+To move electric charge we need electric charge carriers, and that's where our knowledge of atomic particles (especially electrons and protons) comes in handy. Electrons always have a negative charge, while protons always have a positive charge. Neutrons (true to their name) are neutral and have no charge. Electrons and protons amount bWhat is electricity? Electricity flow in simple language
+08/28/2019
+Approximate study time 17 minutes
+
+Contents [show]
+Electricity is all around us (power technology like our cell phones, computers, lights, soldering irons and air conditioners) It's hard to escape electricity in our modern world. Even when you want to run away from electricity, you can't, because electricity is everywhere, from lightning to the synapses in our nervous system.
+But what is electricity? This is a very complex question, and the more you delve into it, the more questions you will come up with. You should know that there is no definitive answer to the question "what is electricity?" We can only know an abstract representation of how electricity interacts with the surrounding environment.
+Electricity is a natural phenomenon that occurs throughout nature and has various forms. In this tutorial we will focus on the flow of electricity ie the things that power our electronic devices. Our goal is to understand how electricity flows through wires, lights LEDs, turns motors, and powers communication devices from a power source.
+Be sure to read the article of the inventor of electricity. Electricity is briefly defined as the flow of electric charge, but there is much more behind this simple statement. Where do these electric charges come from? How to move them? Where are they transferred? How does an electric charge cause things to move mechanically or light up?
+Arduino training course, ESP32 training course, STM32 training course, Electronics training course
+Pico board training course, Raspberry Pi training course, Altium Designer training course, do you want a course discount?
+AVR training course, Proteus training course, Internet of Things training course, board and electronic parts store
+So there are many questions! To begin to explain what electricity is, we need a higher magnification of matter and molecules.
+It can be said that this article is the most complete article you can find about electricity. It may take some time to read this article, but after reading it, you will be completely familiar with the concept of electricity. Everything related to the nature of electricity will be told from beginning to end.
+Journey to the world of atoms
+To understand the principles of electricity, we need to start by focusing on atoms (one of the main building blocks of life and matter). Atoms exist in over a hundred different forms as chemical elements such as hydrogen, carbon, oxygen and copper. Different types of atoms can combine to form molecules, creating matter that we can physically see and touch.
+Atoms are tiny and up to 300 picometers long. A copper penny (if it is truly made of 100% copper) has 10.222 atoms (32,000,000,000,000,000,000,000,000,000 atoms) of copper in it.
+Even the atom is not small enough to explain the operation of electricity. We need to go down to a lower level and look at the building blocks of atoms: protons, neutrons, and electrons.
+Atomic blocks
+An atom is made up of three separate particles: electrons, protons and neutrons. Each atom has a central nucleus, where protons and neutrons are highly concentrated. A group of electrons are circulating around the nucleus.
+ A very simple atomic model. This is not to scale but is useful for understanding how an atom is made. The core of protons and neutrons is surrounded by spinning electrons.
+Each atom must have at least one proton. The number of protons in an atom is important because it determines what chemical element this atom represents. For example, an atom with only one proton is hydrogen, an atom with 29 protons is copper, and an atom with 94 protons is plutonium. This number of protons is called the atomic number of the atom.
+The nucleus of protons, neutrons, follows an important purpose. They hold protons in the nucleus and determine the isotope of an atom. They are not critical to our understanding of electricity, so let's not worry about them for this tutorial.
+Electrons are critical to working with electricity (notice a common theme in their names?) At equilibrium, an atom will have the same number of electrons as protons. As in the boron atom model below, a nucleus with 29 protons (making it a copper atom) is surrounded by 29 electrons.
+ As our understanding of atoms has evolved, so has the way we model them. The Bohr model is very useful for understanding electricity
+The electrons of an atom are not permanently attached to the atom. The electrons in the outer orbit of the atom are called valence electrons. With enough force, a valence electron can be released from the orbit of the atom. Free electrons allow us to move charge, which is what makes up electricity.
+Electric charge flow
+As we mentioned at the beginning of this tutorial, electricity is defined as the flow of electric charge. Electric charge is a property of matter (just like mass, volume, or density) and it can be measured. Just as you can determine the mass of something, you can measure its electrical charge. The basic concept of electric charge is that it can exist in two types: positive (+) or negative (-).
+Equipped with Google Glass features, this smart cover guides you with GPS and 180-degree rear view camera navigation. With this smart technology you can do a manual navigation.
+Is your phone and music louder while riding? Control it from your helmet without the risk of using your phone. Protect yourself from the sun's glare with the help of a sun shade screen at the touch of a button.
+The biggest disadvantage of this technology is the weight of the technology. It may feel like a burden on your head because it is heavier than normal cases.
+If you have any questions about this article, ask in the comments section
+Muse
+
+Place the headband right above your ear to meditate with ease. For healthy inner peace, you experience a great sense of relaxation, like when you meditate.
+This app gives you nature, regardless of where you are, it plays the rhythm of music, rain forests and waves hitting the beach and provides you with a great sense of relaxation.
+It can help you boost your energy by using the perfect meditation headband. It also controls you from diverting your focus to other things by increasing the intensity of sounds. So whenever you get out of rhythm and tend to think about something else, the app touches it and brings you back into focus. So you get a deeper peace with this tool that you will notice the change yourself.
+First Version
+
+Do you love sports? The next tool to wear is FirstV1sion. This wearable gadget integrates a T-shirt with an HD camera to bring an athlete's vision to life as a viewer. Just by watching the race, you experience the emotions, dizziness or feeling of speed and many other things with the athletes. Microphone feature for better sound clarity.
+Video is sent to viewers with a latency of less than 2 milliseconds using RF transmission technology for excellent visualization.
+This can be a great technology for broadcasting any live sports.
+I would like to mention one more wearable gadget that I think is one of the most important and could be interesting to know about:
+Oculus Rift
+
+Oculus Rift is a virtual reality display device developed by Oculus VR. Now Oculus VR has been bought by Facebook.
+Whether you're playing a game or watching a movie, Oculus Rift gives you a different perspective on watching. This device makes you almost part of the game in that environment or you can act like a player. Apart from playing games, you can experience any kind of virtual experience such as space flight, deep forest tour, flying in the sky, etc. There are many things that you can experience with Oculus. Due to its high functionality, it can be used in many fields such as education, learning, and entertainment. This device has great potential and could be a huge success in the tech world.
+Suggested article: Teaching how to convert Hex to Decimal and Binary and vice versa (HEX to Binary)
+This device was planned to be launched from the beginning of 2016.
+What is electricity? Electricity flow in simple language
+08/28/2019
+Approximate study time 17 minutes
+
+Contents [show]
+Electricity is all around us (power technology like our cell phones, computers, lights, soldering irons and air conditioners) It's hard to escape electricity in our modern world. Even when you want to run away from electricity, you can't, because electricity is everywhere, from lightning to the synapses in our nervous system.
+But what is electricity? This is a very complex question, and the more you delve into it, the more questions you will come up with. You should know that there is no definitive answer to the question "what is electricity?" We can only know an abstract representation of how electricity interacts with the surrounding environment.
+Electricity is a natural phenomenon that occurs throughout nature and has various forms. In this tutorial we will focus on the flow of electricity ie the things that power our electronic devices. Our goal is to understand how electricity flows through wires, lights LEDs, turns motors, and powers communication devices from a power source.
+Be sure to read the article of the inventor of electricity. Electricity is briefly defined as the flow of electric charge, but there is much more behind this simple statement. Where do these electric charges come from? How to move them? Where are they transferred? How does an electric charge cause things to move mechanically or light up?
+Arduino training course, ESP32 training course, STM32 training course, Electronics training course
+Pico board training course, Raspberry Pi training course, Altium Designer training course, do you want a course discount?
+AVR training course, Proteus training course, Internet of Things training course, board and electronic parts store
+So there are many questions! To begin to explain what electricity is, we need a higher magnification of matter and molecules.
+It can be said that this article is the most complete article you can find about electricity. It may take some time to read this article, but after reading it, you will be completely familiar with the concept of electricity. Everything related to the nature of electricity will be told from beginning to end.
+Journey to the world of atoms
+To understand the principles of electricity, we need to start by focusing on atoms (one of the main building blocks of life and matter). Atoms exist in over a hundred different forms as chemical elements such as hydrogen, carbon, oxygen and copper. Different types of atoms can be combined
+Each atom must have at least one proton. The number of protons in an atom is important because it determines what chemical element this atom represents. For example, an atom with only one proton is hydrogen, an atom with 29 protons is copper, and an atom with 94 protons is plutonium. This number of protons is called the atomic number of the atom.
+The nucleus of protons, neutrons, follows an important purpose. They hold protons in the nucleus and determine the isotope of an atom. They are not critical to our understanding of electricity, so let's not worry about them for this tutorial.
+Electrons are critical to working with electricity (notice a common theme in their names?) At equilibrium, an atom will have the same number of electrons as protons. As in the boron atom model below, a nucleus with 29 protons (making it a copper atom) is surrounded by 29 electrons.
+ As our understanding of atoms has evolved, so has the way we model them. The Bohr model is very useful for understanding electricity
+The electrons of an atom are not permanently attached to the atom. The electrons in the outer orbit of the atom are called valence electrons. With enough force, a valence electron can be released from the orbit of the atom. Free electrons allow us to move charge, which is what makes up electricity.
+Electric charge flow
+As we mentioned at the beginning of this tutorial, electricity is defined as the flow of electric charge. Electric charge is a property of matter (just like mass, volume, or density) and it can be measured. Just as you can determine the mass of something, you can measure its electrical charge. The basic concept of electric charge is that it can exist in two types: positive (+) or negative (-).
+If you have any questions about this article, ask in the comments section
+To move electric charge we need electric charge carriers, and that's where our knowledge of atomic particles (especially electrons and protons) comes in handy. Electrons always have a negative charge, while protons always have a positive charge. Neutrons (true to their name) are neutral and have no charge. Electrons and protons have the same charge, just different in type.
+ A model of the lithium atom (3 protons) with labeled charges.
+The charge of electrons and protons is important because they provide a means of applying force.
+Electrostatic force
+The electrostatic force (also called Coulomb's law) is the force that acts between charges. Electrostatic force states that electric charges of the same type repel each other, while electric charges of the opposite type attract each other.
+Suggested article: impedance matching and use of impedance matching transformer
+The amount of force applied to two loads depends on their distance from each other. The closer the two are to each other, the greater the force (either pushing against each other or repelling).
+Thanks to the electrostatic force, electrons repel other electrons and are attracted to protons. This force is part of the so-called "glue" that holds atoms together, but it's also the tool we need to make electrons (and charges) flow!
+Create an electric current
+Now we have all the tools to make electric charge flow. Electrons in atoms can act as our charge carriers, as each electron carries a negative charge. If we can free an electron from an atom and force it to move, we can create electricity.
+Consider the atomic model of a copper atom, one of the preferred primary sources for charge flow. At equilibrium, copper has 29 protons in its nucleus and an equal number of electrons orbiting it. Electrons rotate at different distances from the nucleus of the atom. Electrons closer to the nucleus feel a much stronger attraction to the center than those in more distant orbits. The outermost electrons of an atom are called valence electrons, and these electrons need the least force to be released from an atom.
+ This is a diagram of a copper atom: 29 protons in the nucleus, surrounded by bands of orbiting electrons. The removal of electrons closer to the nucleus is difficult, while the valence electron (outer ring) requires relatively little energy to leave the atom.
+By applying enough electrostatic force to the valence electron (either pushing it with another negative charge or attracting it with a positive charge), we can remove the electron from orbit around the atom and create a free electron.
+Now consider a copper wire (a material filled with many copper atoms). As our free electron floats in the space between atoms, it is pulled by the surrounding charges in that space. In this chaos, the free electron eventually finds a new atom to attach to, and in doing so, that electron's negative charge pulls another valence electron out of the atom. Now a new electron jumps through the void and seeks to do the same thing. This chain effect can continue continuously and the flowing electrons create an electric current.
+ A very simple model of the charges that flow through atoms to create a current.
+What does conductivity mean?
+Some basic types of atoms are better at releasing their electrons than others. In order to achieve the best possible form of electron flow, we want to use atoms that are very strongly bonded to A
+Static discharge occurs when electric charges find a means of equalization. The power of absorbing charges increases so much that they can pass through even the best insulators (air, glass, plastic, etc.). Static discharges can be harmful depending on what environment the charges pass through and what surface they are transferred to.
+Equalizing charges across an air gap can result in a visible shock as the moving electrons collide with electrons in the air, which are excited and release energy as light.
+An air gap is used to create a static discharge. Opposite charges accumulate on each of the conductors until their attraction is so great that many charges can flow through the air.
+
+One of the most striking examples of static discharge is lightning. When a group of clouds accumulates enough charge relative to another group of clouds or the ground, the charges try to equalize. As the cloud discharges, large amounts of positive (or sometimes negative) charges in the air pass from the ground into the cloud, creating the visible effect we are all familiar with.
+Static electricity is also very clearly present when we rub balloons on our heads to make our hair go up and…
+In any case, the friction resulting from rubbing transfers different types of electrons. An object that loses its electrons is positively charged, while an object that gains electrons is negatively charged. These two objects are attracted to each other until they become the same in terms of electric charge.
+In working with electronics, there is generally no need to work with static electricity. But when we do this we need to protect our sensitive electronic components from static discharge. Preventative measures against static electricity include using ESD (electrostatic discharge) wristbands or adding special components to circuits to protect against excessive charge surges.
+current electricity
+Current electricity is the form of electricity that enables the use of all our electronic devices. This form of electricity exists when charges are always able to flow. In contrast to static electricity where electric charges accumulate and remain stationary, in current electricity electric charges are always in motion. We will focus on this form of electricity for the rest of the tutorial.
+Circuits
+Current electricity needs a circuit to flow: a closed loop of conductive material. A circuit can be as simple as a conducting wire, but useful circuits are usually a combination of wires and components that control the flow of electricity. The only thing about making circuits is that they cannot have any insulation gaps in them.
+Suggested article: How does the PIR motion sensor work?
+If you have a copper wire and want to pass a current of electrons through it, all the free electrons need a path to flow in the same direction. Copper is an excellent conductor and suitable for carrying loads. If the copper wire is broken in the circuit, loads cannot flow.
+On the other hand, if the wire is connected end to end, all the electrons can flow in the same direction.
+Now we understand how electrons can flow, but firstly, how can we make them flow? And when the electrons are flowing, how do they generate the energy needed to turn on light bulbs or spin motors? For this, we need to know about electric fields.
+What is the field?
+We know things about how the flow of electrons through matter creates electricity. This is a general idea for generating electricity. Now we need a source to generate the electron flow. This source of electron flow comes from an electric field.
+A field is a tool we use to model physical work. The fields cannot be seen because they have no physical appearance, but the effect they have is very real.
+We are all unconsciously familiar with one field: the Earth's gravitational field, the field that attracts objects to itself. The Earth's gravitational field can be modeled by a set of vectors whose center is the Earth. No matter what level you are on, you feel a force pulling you towards you.
+
+The force exerted by the fields is not the same at all points of the field. The farther you are from the source of the field, the less effect the field has on you. As you move away from the center of the earth, the gravitational field of the earth decreases.
+Electric fields are very similar to the earth's gravitational field. Gravitational fields apply force to objects with mass and electric fields apply force to charged objects.
+Electric fields
+Electric fields are an important tool in understanding how electricity flows. Electric fields describe the attractive force that exists between charges. The Earth's gravitational field differs from electric fields in one major way: while the Earth's field generally attracts other objects, electric fields repel charges as much as they attract them.
+The direction of electric fields is always defined as the direction in which a positive test charge moves in the field. The test load should be infinitesimally small, so that the load does not affect the field.
+We can start by constructing electric fields for a positive and negative charge. If you bring the positive test charge near the negative charge, the test charge will be attracted to the negative charge.
+The direction of electric fields is always defined as the direction in which a positive test charge moves in the field. The test load should be infinitesimally small, so that the load does not affect the field.
+We can start by constructing electric fields for a positive and negative charge. If you bring the positive test charge near the negative charge, the test charge will be attracted to the negative charge. Therefore, for a negative charge, we draw the arrows of the electric field inward.
+
+We place the same test charge near the positive charge, which results in outward repulsion, so we draw arrows outward for the positive charge.
+A negative charge has an internal electric field because it attracts positive charges. A positive charge has an outward electric field and charges move away from it. Groups of electric charges can be placed together to create complete electric fields.
+
+In the electric field shown above, positive charges move towards negative charges. Imagine a small positive test bar in the field. It must follow the direction of the arrows. As we have seen, electricity is usually the flow of electrons (negative charges) that flow in an electric field.
+Electric fields provide the necessary force to create current. An electric field in a circuit is like an electron pump: a large source of negative charges flowing through the circuit to the mass of positive charges.
+Electric potential
+Electrical circuits must be able to store energy and transfer it to other forms such as heat, light or motion. The stored energy of a circuit is called electric potential energy.
+What is potential energy?
+To understand potential energy, we need to understand energy in general.
+Energy is the ability of an object to do work on another object so that you can move the object. There are different types of energy, some of which we can see (such as mechanical) and others we cannot see (such as chemical or electrical). Regardless of its form, energy exists in one of two states: kinetic or potential.
+A moving object has kinetic energy. The amount of kinetic energy of an object depends on its mass and speed. On the other hand, potential energy is the energy stored in a stationary object. This energy describes how much work an object can do if it is moving. We can generally control this energy. When an object moves, its potential energy is converted into kinetic energy.
+
+Let's go back to the example of using gravity. A ball at rest on top of a tower has a lot of (stored) energy. As it falls, the ball (pulled by the gravitational field) accelerates towards the ground. As the ball accelerates, potential energy is converted into kinetic energy (energy from motion). Finally, all the ball's energy is converted from potential to kinetic, and then when it hits the ground, its energy is transferred to the ground. When the ball is on the ground, it has very little potential energy.
+Electric potential energy
+Just as mass in a gravitational field has gravitational potential energy, charges in an electric field have electric potential energy. The electric potential energy of a charge describes how much stored energy it has, when it is moved by an electrostatic force, this energy can become kinetic and the charge can move.
+Suggested article: audio filters (teaching types of audio filtering circuits)
+A positive charge near another positive charge has a high potential energy, like a ball on top of a tower. If it moves, the charge is repelled away from the similar charge. A positive test charge placed near a negative charge has a small potential energy, similar to a ball on the ground.
+
+To imbue anything with potential energy, we must move it along a path. In the case of the ball, the work done is to carry it up 163 floors against the gravitational field. Similarly, the work done for a positive charge must be in the opposite direction of the electric field vectors (toward the other positive charge or away from the negative charge). The higher the load, the more work you have to do. Similarly, if you want to move a negative charge away from a positive charge in an electric field, you have to do work.
+For any charge in an electric field, its electric potential energy depends on the type of charge (positive or negative), the size of the charge and its position in the field. Electric potential energy is measured in units of Joules (J).
+Electric potential
+Electric potential is based on electric potential energy to determine the amount of energy stored in electric fields. This is another concept that helps us model the behavior of electric fields. Electric potential is not the same as electric potential energy!
+At any point in an electric field, the electric potential is the amount of electric potential energy divided by the amount of charge at that point. Electric potential is given in units of joules per coulomb (J/C), which we define as volts (V).
+In every electric field, there are two points of electric potential that are of interest to us. A point at high potential means where a positive charge has the highest possible potential energy, and a point at low potential, where a charge has the lowest possible energy.
+One of the most common terms we discuss in electrical evaluation is voltage. Voltage is the potential difference between two points in an electric field. Voltage gives us an idea of ​​how much force an electric field exerts.
+
